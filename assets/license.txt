@@ -1,0 +1,11 @@
+Model Information:
+* title:	BMW E34 [stance style]
+* source:	https://sketchfab.com/3d-models/bmw-e34-stance-style-ffe1a3a1bcb34e0bb80f1aa41c9edb46
+* author:	Myedsu (https://sketchfab.com/myedsu)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "BMW E34 [stance style]" (https://sketchfab.com/3d-models/bmw-e34-stance-style-ffe1a3a1bcb34e0bb80f1aa41c9edb46) by Myedsu (https://sketchfab.com/myedsu) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
