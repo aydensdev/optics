@@ -62,6 +62,7 @@ const refractionShader = {
     uniforms: {
         sceneTexture: { value: null }, // This is the scene texture
         refractionIndex: { value: 1.6 }, // Refraction index (for glass, typically 1.5)
+        focalLength: { value: 1.0 }, // Focal length
         cameraPos: { value: new THREE.Vector3() }, // Camera position
         distortionStrength: { value: 1.0 }, // Distortion strength
         projectionMatrix: { value: new THREE.Matrix4() }, // Add projection matrix
@@ -87,11 +88,19 @@ const refractionShader = {
         varying vec3 vNormal;
 
         void main() {
+
             // Compute view direction
             vec3 viewDir = normalize(vWorldPosition - cameraPos);
 
             // Compute refracted direction
             vec3 refractedRay = refract(viewDir, normalize(vNormal), 1.0 / refractionIndex);
+
+            // Approximate exit refraction
+            // next is sphere intersection
+            // or figure out how phet does it with thin lens
+            //vec3 oppositeNormal = vec3(vNormal.x, -vNormal.y, -vNormal.z);
+            //refractedRay = refract(refractedRay, normalize(oppositeNormal), refractionIndex);
+            //refractedRay = refract(viewDir, normalize(vNormal), 1.0 / refractionIndex);
 
             // Convert refracted direction to screen space
             vec4 projected = projectionMatrix * viewMat * vec4(vWorldPosition + refractedRay, 1.0);
@@ -101,8 +110,8 @@ const refractionShader = {
             uv = clamp(uv, 0.0, 1.0);
 
             // Sample texture
-            vec4 refractionColor = texture(sceneTexture, uv);
-            gl_FragColor = (refractionColor+0.1)*1.7;
+            vec3 refractionColor = texture(sceneTexture, uv).rgb;
+            gl_FragColor = vec4(pow(refractionColor, vec3(1.0 / 2.15)), 1.0);
         }
     `
 };
@@ -110,8 +119,13 @@ const refractionShader = {
 const renderTarget = new THREE.WebGLRenderTarget(window.innerWidth*pw, window.innerHeight, {
     minFilter: THREE.LinearFilter,
     magFilter: THREE.LinearFilter,
-    format: THREE.RGBFormat
+    format: THREE.RGBFormat,
 });
+
+renderTarget.texture.colorSpace = THREE.SRGBColorSpace;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+console.log(renderer);
 
 // Lens mesh and material
 
@@ -226,17 +240,24 @@ function refreshProperties()
 	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 	renderer.setClearColor( 0xffffff, 0);
 
-    //camera.updateProjectionMatrix();
+    
     
 	Object.assign(orbiter, {
 		enablePan: false, enableZoom: false,
 		minPolarAngle: Math.PI*0.4,
 		maxPolarAngle: Math.PI*0.6,
-		autoRotate: true, autoRotateSpeed: config.rotateSpeed,
+        minDistance: config.camDistance,
+        maxDistance: config.camDistance,
+		autoRotate: true, 
+        autoRotateSpeed: config.rotateSpeed,
 	});
+    //camera.updateProjectionMatrix();
 
     createLensMesh();
     lensMaterial.uniforms.refractionIndex.value =  config.refractionIndex;
+    // lensmakers equation or sum
+    lensMaterial.uniforms.focalLength.value = config.lensRadius/(2.0*(config.refractionIndex - 1.0));
+    console.log(config.lensRadius/(2.0*(config.refractionIndex - 1.0)))
     bunny.position.set(-config.bunnyDist, -1.0, 0);
 }
 
@@ -248,7 +269,8 @@ gui.domElement.id = 'gui';
 gui.add(config, 'lensRadius', 0.1, 5).onChange(refreshProperties);
 gui.add(config, 'lensDiameter', 0.1, 2*config.lensRadius).onChange(refreshProperties);
 gui.add(config, 'refractionIndex', 1.0, 2.417).onChange(refreshProperties);
-gui.add(config, 'bunnyDist', 0.0, 10.0).onChange(refreshProperties);
+gui.add(config, 'bunnyDist', 0.0, 35.0).onChange(refreshProperties);
+gui.add(config, 'camDistance', 5.0, 30.0).onChange(refreshProperties);
 gui.add({ add:setCamOrtho }, 'add').name('Standard View');
 
 orbiter.addEventListener('start', () =>
