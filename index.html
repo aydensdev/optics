@@ -19,6 +19,18 @@
             position: absolute;
             right: 20%;
         }
+        #display{
+			color:white;
+			font-family: monospace;
+			position: absolute;
+            bottom:10%; left:50%;
+			transform: translate(-50%, 50%);
+			padding: 1em 1em 1em 1em;
+			border-radius: 0.7em;
+			background-color: rgba(0, 0, 0, 0.5);
+            text-align: center;
+            font-size: 1.2em;
+		}
 	</style>
 	
 	<canvas id="canvas"></canvas>
@@ -30,5 +42,11 @@
           }
         }
     </script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=default'></script>
 	<script src="./modules/renderer.js" type="module"></script>
+    <p id="display">
+        $${\frac{1}{f} = \frac{1}{d_o} + \frac{1}{d_i} \quad \quad M = \frac{h_i}{h_o} = -\frac{d_i}{d_o}}$$
+        <b>Image Characteristics:</b> <br><br>
+        <b>Location</b>: di, <b>Orientation</b>: M, <b>Size</b>: hi, <b>Type</b>: Virtual
+    </p>
 </body>
