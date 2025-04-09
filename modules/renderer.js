@@ -1,46 +1,50 @@
-// This file will handle 3D rendering of the scene. 
-// It is dependant on main.js for simulation information.
-
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { GUI } from './dat.gui.module.js'
+import Stats from "./stats.module.js";
 
-const DEG_TO_RAD = Math.PI/180;
-const pw = 0.6;
-const camY = 0;
+const DEG_TO_RAD = (deg) => deg*Math.PI/180;
 
 var config = 
 {
-	camHeight: 0,
+    percentWidth: 0.6,
+    camHeight: 0,
 	camDistance: 5,
 	camAngleX: 0.5,
 	rotateSpeed: 0,
-	planeRadius: 0.1,
-	ambStrength: 0, 
-	dirStrength: 0,
-	lightColor: '#ffffff',
-	objColor: 0x3966a8,
+
+    lensX: -1.0,
     lensRadius: 1.7,
     lensDiameter: 2,
     refractionIndex: 1.5,
     bunnyDist: 1.0,
+    objectID: 0,
 }
 
-// Create scene and camera
+var stats = new Stats();
+stats.showPanel(0);
+document.body.appendChild(stats.dom);
+stats.dom.style.left = "20%";
 
 const canvas = document.querySelector("canvas");
 const scene = new THREE.Scene();
 
 const perspectiveCamera = new THREE.PerspectiveCamera( 60, 0, 0.1, 1000 );
-const orthoCamera = new THREE.OrthographicCamera();
 let camera = perspectiveCamera;
 
+const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas });
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+const orbiter = new OrbitControls( camera, renderer.domElement );
+
+// Secondary camera for equation view
+
+const orthoCamera = new THREE.OrthographicCamera();
 function setCamOrtho()
 {  
-    let aspect = window.innerWidth*pw / window.innerHeight;
+    let aspect = window.innerWidth*config.percentWidth / window.innerHeight;
     let size = 2.7;
     orthoCamera.left = -size * aspect;
     orthoCamera.right = size * aspect;
@@ -49,16 +53,39 @@ function setCamOrtho()
     orthoCamera.updateProjectionMatrix();
 
     camera = orthoCamera;
-    camera.position.set(0, camY, config.camDistance);
+    camera.position.set(0, config.camHeight, config.camDistance);
 }
 
-const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas });
-const orbiter = new OrbitControls( camera, renderer.domElement );
+// A Cube Camera for reflection and refraction simulation
 
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1;
+const renderTarget = new THREE.WebGLCubeRenderTarget(1024, {
+    format: THREE.RGBAFormat,
+    generateMipmaps: true,
+    minFilter: THREE.LinearMipmapLinearFilter,
+});
+const cubeCamera = new THREE.CubeCamera(0.01, 100, renderTarget);
 
-const refractionShader = {
+// Set up scene objects
+
+const skyboxMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(20, 32, 32), 
+    new THREE.MeshBasicMaterial({
+        map: null, // To be assigned when HDR loads
+        side: THREE.BackSide
+    }),
+);
+skyboxMesh.rotateY(DEG_TO_RAD(160))
+scene.add(skyboxMesh);
+
+new RGBELoader().load('./assets/lab4k.hdr', (texture) => {
+    texture.mapping = THREE.EquirectangularReflectionMapping;
+    scene.environment = texture;
+    skyboxMesh.material.map = texture;
+    skyboxMesh.material.needsUpdate = true;
+});
+
+const shaderCode = await (await fetch("./modules/refraction.frag")).text();
+const lensMaterial = new THREE.ShaderMaterial({
     uniforms: {
         sceneTexture: { value: null }, // This is the scene texture
         refractionIndex: { value: 1.6 }, // Refraction index (for glass, typically 1.5)
@@ -77,171 +104,125 @@ const refractionShader = {
             gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
     `,
-    fragmentShader: `
-        uniform sampler2D sceneTexture;
-        uniform float refractionIndex;
-        uniform vec3 cameraPos;
-        uniform mat4 projectionMatrix;
-        uniform mat4 viewMat;
-
-        varying vec3 vWorldPosition;
-        varying vec3 vNormal;
-
-        void main() {
-
-            // Compute view direction
-            vec3 viewDir = normalize(vWorldPosition - cameraPos);
-
-            // Compute refracted direction
-            vec3 refractedRay = refract(viewDir, normalize(vNormal), 1.0 / refractionIndex);
-
-            // Approximate exit refraction
-            // next is sphere intersection
-            // or figure out how phet does it with thin lens
-            //vec3 oppositeNormal = vec3(vNormal.x, -vNormal.y, -vNormal.z);
-            //refractedRay = refract(refractedRay, normalize(oppositeNormal), refractionIndex);
-            //refractedRay = refract(viewDir, normalize(vNormal), 1.0 / refractionIndex);
-
-            // Convert refracted direction to screen space
-            vec4 projected = projectionMatrix * viewMat * vec4(vWorldPosition + refractedRay, 1.0);
-            vec2 uv = projected.xy / projected.w * 0.5 + 0.5; // Correct UV mapping
-
-            // Ensure UV coordinates stay in valid range
-            uv = clamp(uv, 0.0, 1.0);
-
-            // Sample texture
-            vec3 refractionColor = texture(sceneTexture, uv).rgb;
-            gl_FragColor = vec4(pow(refractionColor, vec3(1.0 / 2.15)), 1.0);
-        }
-    `
-};
-
-const renderTarget = new THREE.WebGLRenderTarget(window.innerWidth*pw, window.innerHeight, {
-    minFilter: THREE.LinearFilter,
-    magFilter: THREE.LinearFilter,
-    format: THREE.RGBFormat,
+    fragmentShader: shaderCode,
+    side: THREE.DoubleSide,
 });
 
-renderTarget.texture.colorSpace = THREE.SRGBColorSpace;
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-console.log(renderer);
-
-// Lens mesh and material
-
 let lensMesh = null;
-const lensX = -1.0;
+function createLensMesh() 
+{   
+    if (config.lensDiameter >= config.lensRadius*2) return;
+ 
+    let radius = config.lensRadius;
+    let diameter = config.lensDiameter;
+    let isConcave = config.objectID == 1 || config.objectID == 3;
+    let isMirror = config.objectID == 2 || config.objectID == 3;
 
-const lensMaterial = new THREE.ShaderMaterial(refractionShader);
-
-function createLensGeometry(radius, diameter) 
-{
     const theta = Math.asin(diameter / (2 * radius));
     const offset = Math.sqrt(radius**2 - (diameter / 2)**2);
+    const offset2 = radius - offset;
 
-    const frontGeo = new THREE.SphereGeometry(radius, 64, 32, 0, 2 * Math.PI, 0, theta);
+    var frontGeo = new THREE.SphereGeometry(radius, 64, 32, 0, 2 * Math.PI, 0, theta);
     const backGeo = new THREE.SphereGeometry(radius, 64, 32, 0, 2 * Math.PI, 0, theta);
 
     frontGeo.translate(0, -offset, 0);
     backGeo.translate(0, -offset, 0);
 
-    frontGeo.rotateZ(-90 * DEG_TO_RAD);
-    backGeo.rotateZ(90 * DEG_TO_RAD);
+    if (isConcave)
+    {
+        frontGeo.translate(0, -offset2, 0);
+        backGeo.translate(0, -offset2, 0);
 
-    frontGeo.translate(lensX, 0, 0);
-    backGeo.translate(lensX, 0, 0);
+        frontGeo = mergeGeometries([
+            frontGeo, 
+            new THREE.CylinderGeometry(
+                diameter/2, diameter/2, 2*offset2, 64, 1, true
+            )
+        ]);
+    }
 
-    return mergeGeometries([frontGeo, backGeo]);
-}
+    frontGeo.rotateZ(DEG_TO_RAD(-90));
+    backGeo.rotateZ(DEG_TO_RAD(90));
 
-function createLensMesh() 
-{   
-    if (config.lensDiameter >= config.lensRadius*2) return;
-    const geometry = createLensGeometry(config.lensRadius, config.lensDiameter);
-    if (lensMesh) {
-        lensMesh.geometry.dispose(); // Dispose of the old geometry
-        lensMesh.geometry = geometry; // Reassign the new geometry
-    } else {
-        lensMesh = new THREE.Mesh(geometry, lensMaterial);
+    frontGeo.translate(config.lensX, 0, 0);
+    backGeo.translate(config.lensX, 0, 0);
+
+    const geometry = mergeGeometries([frontGeo, backGeo]);
+
+    let mat = lensMaterial;
+    if (isMirror)
+    {
+        mat = new THREE.MeshPhysicalMaterial({
+            color: new THREE.Color('white'),
+            roughness: 0.0,
+            metalness: 1.0,
+            side: THREE.DoubleSide,
+            envMap: renderTarget.texture,
+        })
+    }
+
+    // Create mesh or just refresh it
+
+    if (!lensMesh) 
+    {
+        lensMesh = new THREE.Mesh(geometry, mat);
         lensMesh.position.set(2, 0, 0);
+        lensMesh.add(cubeCamera)
         scene.add(lensMesh);
     }
+
+    lensMesh.geometry.dispose();
+    lensMesh.geometry = geometry;
+    lensMesh.material = mat;
+    lensMesh.material.needsUpdate = true;
 }
 
 createLensMesh();
 
-// Bunny
 var bunny;
+
 new GLTFLoader().load("./assets/scene.gltf", object =>
 {
     bunny = object.scene;
     bunny.scale.multiplyScalar(8.0)
-    bunny.position.set(-2.0, -1.0, -10);
-    bunny.rotateY(45*DEG_TO_RAD);
+    bunny.rotateY(DEG_TO_RAD(45));
     scene.add(bunny);
-    refreshProperties();
+    refresh();
 })
 
-// Skybox setup
+// Render function
 
-const skyboxGeo = new THREE.SphereGeometry(20, 32, 32); 
-const skyboxMat = new THREE.MeshBasicMaterial({
-    map: null, // To be assigned when HDR loads
-    side: THREE.BackSide
-});
-const skyboxMesh = new THREE.Mesh(skyboxGeo, skyboxMat);
-skyboxMesh.rotateY(160*DEG_TO_RAD)
-scene.add(skyboxMesh);
-
-new RGBELoader().load('./assets/lab4k.hdr', (texture) => {
-    texture.mapping = THREE.EquirectangularReflectionMapping;
-    scene.environment = texture;
-    skyboxMat.map = texture;
-    skyboxMat.needsUpdate = true;
-});
-
-// Render function from main.js
-
-function render(frame, carInfo)
+function render(timestamp)
 {   
+    stats.begin();
     orbiter.update();
+
+    // Hide lens mesh while rendering the scene to the texture
+    lensMesh.visible = false; 
+    cubeCamera.update(renderer, scene);
+    lensMesh.visible = true;
 
     // Update uniforms
     lensMaterial.uniforms.cameraPos.value.copy(camera.position);
     lensMaterial.uniforms.projectionMatrix.value.copy(camera.projectionMatrix);
     lensMaterial.uniforms.viewMat.value.copy(camera.matrixWorldInverse);
-
-    // Hide lens mesh while rendering the scene to the texture
-    lensMesh.visible = false; 
-
-    // Render the scene to the texture
-    renderer.setRenderTarget(renderTarget);
-    renderer.clear();  // Clear color and depth to avoid artifacts
-    renderer.render(scene, camera);
-
-    // Set the scene texture in the shader
     lensMaterial.uniforms.sceneTexture.value = renderTarget.texture;
-    lensMaterial.needsUpdate = true;
-
-    // Show the lens mesh again for the final render
-    lensMesh.visible = true;
 
     // Render final scene
-    renderer.setRenderTarget(null);
     renderer.clear(); 
     renderer.render(scene, camera);
+    stats.end();
+    requestAnimationFrame(render);
 }
 
-// Update object properties
+// User interaction handling
 
-function refreshProperties()
+function refresh()
 {
 	renderer.shadowMap.enabled = true;
 	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 	renderer.setClearColor( 0xffffff, 0);
 
-    
-    
 	Object.assign(orbiter, {
 		enablePan: false, enableZoom: false,
 		minPolarAngle: Math.PI*0.4,
@@ -251,26 +232,32 @@ function refreshProperties()
 		autoRotate: true, 
         autoRotateSpeed: config.rotateSpeed,
 	});
-    //camera.updateProjectionMatrix();
 
     createLensMesh();
-    lensMaterial.uniforms.refractionIndex.value =  config.refractionIndex;
-    // lensmakers equation or sum
+
+    // Update shader uniforms
+    lensMaterial.uniforms.refractionIndex.value = config.refractionIndex;
     lensMaterial.uniforms.focalLength.value = config.lensRadius/(2.0*(config.refractionIndex - 1.0));
-    console.log(config.lensRadius/(2.0*(config.refractionIndex - 1.0)))
+
     bunny.position.set(-config.bunnyDist, -1.0, 0);
 }
-
-// dat.gui setup
 
 const gui = new GUI()
 gui.domElement.id = 'gui';
 
-gui.add(config, 'lensRadius', 0.1, 5).onChange(refreshProperties);
-gui.add(config, 'lensDiameter', 0.1, 2*config.lensRadius).onChange(refreshProperties);
-gui.add(config, 'refractionIndex', 1.0, 2.417).onChange(refreshProperties);
-gui.add(config, 'bunnyDist', 0.0, 35.0).onChange(refreshProperties);
-gui.add(config, 'camDistance', 5.0, 30.0).onChange(refreshProperties);
+gui.add(config, 'lensRadius', 0.1, 5).onChange(refresh).name('Lens Radius');
+gui.add(config, 'lensDiameter', 0.1, 10).onChange(refresh).name('Lens Diameter');
+gui.add(config, 'refractionIndex', 1.0, 2.417).onChange(refresh).name('Refraction Index');
+gui.add(config, 'bunnyDist', 0.0, 35.0).onChange(refresh).name('Bunny Distance');
+gui.add(config, 'camDistance', 5.0, 30.0).onChange(refresh).name('Camera Distance');
+
+gui.add(config, 'objectID', {
+    "Convex Lens": 0, 
+    "Concave Lens": 1,
+    "Convex Mirror": 2,
+    "Concave Mirror": 3,
+}).onChange(refresh).name('Object Type');
+
 gui.add({ add:setCamOrtho }, 'add').name('Standard View');
 
 orbiter.addEventListener('start', () =>
@@ -278,42 +265,14 @@ orbiter.addEventListener('start', () =>
     if (!camera.isPerspectiveCamera)
     {
         camera = perspectiveCamera;
-        
-        camera.position.set(0, camY, config.camDistance);
-
+        camera.position.set(0, config.camHeight, config.camDistance);
         onWindowResize();
-        
-        // animateFOV(50, camera.getFocalLength(), 30)
-
-        // function animateFOV(start, target, steps)
-        // {   
-        //     function ease(x)
-        //     {
-        //         //return -(Math.cos(Math.PI * x) - 1) / 2;
-        //         return 0.5*Math.log(x)+1;
-        //     };
-
-        //     let step = 0;
-        //     let interval = setInterval(() => 
-        //     {
-        //         camera.setFocalLength(THREE.MathUtils.lerp(start, target, ease(step/steps)));
-        //         console.log(1 - Math.pow(1 - step/steps, 3))
-        //         if (step == steps)
-        //         {
-        //             clearInterval(interval);
-        //             camera.setFocalLength(target);
-        //         }
-        //         step++;
-        //     }, 8); // Update every 16ms (approximately 60fps)
-        // }
     }
 });
 
-// Handle resizing
-
 function onWindowResize() 
 {
-	let width = window.innerWidth*pw;
+	let width = window.innerWidth*config.percentWidth;
 	let height = window.innerHeight;
 
 	camera.aspect = width / height;
@@ -326,8 +285,6 @@ function onWindowResize()
 
 window.addEventListener('resize', onWindowResize);
 
-// Exporting
-
 onWindowResize();
 setCamOrtho();
-export { render };
+render();
