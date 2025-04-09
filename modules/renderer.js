@@ -11,16 +11,17 @@ const DEG_TO_RAD = (deg) => deg*Math.PI/180;
 var config = 
 {
     percentWidth: 0.6,
-    camHeight: 0,
+    camX: -1,
+    camHeight: -0.2,
 	camDistance: 5,
 	camAngleX: 0.5,
 	rotateSpeed: 0,
 
-    lensX: -1.0,
+    lensX: 0.0,
     lensRadius: 1.7,
     lensDiameter: 2,
     refractionIndex: 1.5,
-    bunnyDist: 1.0,
+    bunnyDist: 1.8,
     objectID: 0,
 }
 
@@ -53,7 +54,7 @@ function setCamOrtho()
     orthoCamera.updateProjectionMatrix();
 
     camera = orthoCamera;
-    camera.position.set(0, config.camHeight, config.camDistance);
+    camera.position.set(config.camX, config.camHeight, config.camDistance);
 }
 
 // A Cube Camera for reflection and refraction simulation
@@ -88,12 +89,10 @@ const shaderCode = await (await fetch("./modules/refraction.frag")).text();
 const lensMaterial = new THREE.ShaderMaterial({
     uniforms: {
         sceneTexture: { value: null }, // This is the scene texture
-        refractionIndex: { value: 1.6 }, // Refraction index (for glass, typically 1.5)
         focalLength: { value: 1.0 }, // Focal length
         cameraPos: { value: new THREE.Vector3() }, // Camera position
-        distortionStrength: { value: 1.0 }, // Distortion strength
-        projectionMatrix: { value: new THREE.Matrix4() }, // Add projection matrix
-        viewMat: { value: new THREE.Matrix4() },       // Add view matrix
+        lensPos: { value: new THREE.Vector3(config.lensX, 0, 0) }, // Lens position
+        isConcave: { value: false }, // Is the lens concave?
     },
     vertexShader: `
         varying vec3 vWorldPosition;
@@ -166,7 +165,7 @@ function createLensMesh()
     if (!lensMesh) 
     {
         lensMesh = new THREE.Mesh(geometry, mat);
-        lensMesh.position.set(2, 0, 0);
+        lensMesh.position.set(config.lensX, 0, 0);
         lensMesh.add(cubeCamera)
         scene.add(lensMesh);
     }
@@ -199,14 +198,16 @@ function render(timestamp)
 
     // Hide lens mesh while rendering the scene to the texture
     lensMesh.visible = false; 
+    cubeCamera.position.copy(lensMesh.position);
     cubeCamera.update(renderer, scene);
     lensMesh.visible = true;
 
     // Update uniforms
     lensMaterial.uniforms.cameraPos.value.copy(camera.position);
-    lensMaterial.uniforms.projectionMatrix.value.copy(camera.projectionMatrix);
-    lensMaterial.uniforms.viewMat.value.copy(camera.matrixWorldInverse);
+    lensMaterial.uniforms.lensPos.value.copy(lensMesh.position);
     lensMaterial.uniforms.sceneTexture.value = renderTarget.texture;
+    lensMaterial.uniforms.focalLength.value = config.lensRadius/(2.0*(config.refractionIndex - 1.0));
+    lensMaterial.uniforms.isConcave.value = (config.objectID == 1);
 
     // Render final scene
     renderer.clear(); 
@@ -236,9 +237,6 @@ function refresh()
     createLensMesh();
 
     // Update shader uniforms
-    lensMaterial.uniforms.refractionIndex.value = config.refractionIndex;
-    lensMaterial.uniforms.focalLength.value = config.lensRadius/(2.0*(config.refractionIndex - 1.0));
-
     bunny.position.set(-config.bunnyDist, -1.0, 0);
 }
 
@@ -247,16 +245,16 @@ gui.domElement.id = 'gui';
 
 gui.add(config, 'lensRadius', 0.1, 5).onChange(refresh).name('Lens Radius');
 gui.add(config, 'lensDiameter', 0.1, 10).onChange(refresh).name('Lens Diameter');
-gui.add(config, 'refractionIndex', 1.0, 2.417).onChange(refresh).name('Refraction Index');
-gui.add(config, 'bunnyDist', 0.0, 35.0).onChange(refresh).name('Bunny Distance');
-gui.add(config, 'camDistance', 5.0, 30.0).onChange(refresh).name('Camera Distance');
+gui.add(config, 'refractionIndex', 1.0, 2.417).onChange(refresh).name('Lens Strength');
+gui.add(config, 'bunnyDist', 0.0, 35.0).onChange(refresh).name('Object Distance');
+gui.add(config, 'camDistance', 0.0, 30.0).onChange(refresh).name('Camera Distance');
 
 gui.add(config, 'objectID', {
     "Convex Lens": 0, 
     "Concave Lens": 1,
     "Convex Mirror": 2,
     "Concave Mirror": 3,
-}).onChange(refresh).name('Object Type');
+}).onChange(refresh).name('Simulation Type');
 
 gui.add({ add:setCamOrtho }, 'add').name('Standard View');
 
