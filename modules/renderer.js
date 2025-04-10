@@ -191,6 +191,16 @@ new GLTFLoader().load("./assets/scene.gltf", object =>
 
 // Render function
 
+const display = document.getElementByID("display");
+function updateDisplay()
+{
+	var location, orientation, height, type = 0;
+	const math = "$${\frac{1}{f} = \frac{1}{d_o} + \frac{1}{d_i} \quad \quad M = \frac{h_i}{h_o} = -\frac{d_i}{d_o}}$$"
+	display.innerHTML = 
+	math+`<b>Image Characteristics:</b> <br><br>
+        <b>Location</b>: ${location}, <b>Orientation</b>: ${orientation}, <b>Size</b>: ${height}, <b>Type</b>: ${type}`;
+}
+
 function render(timestamp)
 {   
     stats.begin();
@@ -212,6 +222,9 @@ function render(timestamp)
     // Render final scene
     renderer.clear(); 
     renderer.render(scene, camera);
+
+    updateDisplay();
+	
     stats.end();
     requestAnimationFrame(render);
 }
