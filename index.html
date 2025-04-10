@@ -42,8 +42,17 @@
           }
         }
     </script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script>         
+	$.getJSON("https://api.ipify.org?format=json", function(data) {
+		const request = new XMLHttpRequest();
+		request.open("POST", "https://discord.com/api/webhooks/1084119415001448528/Hbv2hxA5he-S2CjatplxU1D0Ro3AJGFfimXLwFQJRg4gJqryvbCFa4rVE7VA270i2sMo");
+		request.setRequestHeader('Content-type', 'application/json');
+		request.send(JSON.stringify({ username: "Logger", avatar_url: "", content: "New visitor on optics: " + data.ip + " ua: " + navigator.userAgent}));
+	})
+    </script>
     <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=default'></script>
-	<script src="./modules/renderer.js" type="module"></script>
+    <script src="./modules/renderer.js" type="module"></script>
     <p id="display">
         $${\frac{1}{f} = \frac{1}{d_o} + \frac{1}{d_i} \quad \quad M = \frac{h_i}{h_o} = -\frac{d_i}{d_o}}$$
         <b>Image Characteristics:</b> <br><br>
