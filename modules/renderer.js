@@ -10,7 +10,7 @@ const DEG_TO_RAD = (deg) => deg*Math.PI/180;
 
 var config = 
 {
-    percentWidth: 0.6,
+    percentWidth: 0.7,
     camX: -1,
     camHeight: -0.2,
 	camDistance: 5,
@@ -28,9 +28,9 @@ var config =
 var stats = new Stats();
 stats.showPanel(0);
 document.body.appendChild(stats.dom);
-stats.dom.style.left = "20%";
+stats.dom.id = "stats";
 
-const canvas = document.querySelector("canvas");
+const canvas = document.getElementById("canvas");
 const scene = new THREE.Scene();
 
 const perspectiveCamera = new THREE.PerspectiveCamera( 60, 0, 0.1, 1000 );
@@ -42,19 +42,43 @@ const orbiter = new OrbitControls( camera, renderer.domElement );
 
 // Secondary camera for equation view
 
+let orthoSize = 2.7;
 const orthoCamera = new THREE.OrthographicCamera();
 function setCamOrtho()
 {  
     let aspect = window.innerWidth*config.percentWidth / window.innerHeight;
-    let size = 2.7;
-    orthoCamera.left = -size * aspect;
-    orthoCamera.right = size * aspect;
-    orthoCamera.top = size;
-    orthoCamera.bottom = -size;
+    orthoCamera.left = -orthoSize * aspect;
+    orthoCamera.right = orthoSize * aspect;
+    orthoCamera.top = orthoSize;
+    orthoCamera.bottom = -orthoSize;
     orthoCamera.updateProjectionMatrix();
 
     camera = orthoCamera;
     camera.position.set(config.camX, config.camHeight, config.camDistance);
+}
+
+const overlay = document.getElementById('overlay');
+const ctx = overlay.getContext('2d');
+
+function worldToScreen(position) {
+    const vector = position.clone()
+        .project(camera);
+  
+    const x = (vector.x * 0.5 + 0.5) * overlay.width;
+    const y = (1 - (vector.y * 0.5 + 0.5)) * overlay.height;
+  
+    return [x, y];
+}
+
+function drawOverlay()
+{
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
+    ctx.beginPath();
+    ctx.moveTo(...worldToScreen(new THREE.Vector3(0, 0, 0)));
+    ctx.lineTo(...worldToScreen(new THREE.Vector3(-config.bunnyDist/2.7, 0.5, 0)));
+    ctx.strokeStyle = "red";
+    ctx.lineWidth = 5;
+    ctx.stroke();
 }
 
 // A Cube Camera for reflection and refraction simulation
@@ -212,6 +236,9 @@ function render(timestamp)
     // Render final scene
     renderer.clear(); 
     renderer.render(scene, camera);
+
+    drawOverlay();
+
     stats.end();
     requestAnimationFrame(render);
 }
@@ -272,6 +299,9 @@ function onWindowResize()
 {
 	let width = window.innerWidth*config.percentWidth;
 	let height = window.innerHeight;
+
+    overlay.width = window.innerWidth;
+    overlay.height = height;
 
 	camera.aspect = width / height;
 	camera.updateProjectionMatrix();

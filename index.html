@@ -6,34 +6,80 @@
 		body{
 			background-color: #2b2b2b;
 			margin: 0;
+            overflow: hidden;
 		}
-		#canvas{
+        .orientation-warning 
+        {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            font-size: 3vh;
+            display: none; /* shown in portrait via media query */
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            z-index: 9999;
+            pointer-events: all;
+            flex-direction: column;
+        }
+		#canvas
+        {
 			position:absolute;
 			top:50%; left:50%;
 			transform: translate(-50%, -50%);
-			width: 60%; height:100%;
+			width: 70%; height:100%;
 			background-color: #2b2b2b;
 			outline: none;
 		}
-        .dg{
+        .dg
+        {
             position: absolute;
-            right: 20%;
+            right: 15%;
         }
-        #display{
+        #display
+        {
 			color:white;
 			font-family: monospace;
 			position: absolute;
-            bottom:10%; left:50%;
-			transform: translate(-50%, 50%);
-			padding: 1em 1em 1em 1em;
+            bottom:1%; left:50%;
+			transform: translate(-50%, 0%);
+			padding: 2vh;
 			border-radius: 0.7em;
 			background-color: rgba(0, 0, 0, 0.5);
             text-align: center;
-            font-size: 1.2em;
+            font-size: 2.1vh;
 		}
+        #stats
+        {
+            left: 15% !important;
+        }
+        #overlay 
+        {
+            position: fixed;
+            top: 0; left: 0;
+            pointer-events: none; /* so it doesn’t block mouse clicks */
+        }
+
+        /*Phone support*/
+        @media (max-width: 768px) or (orientation: portrait) {
+            .orientation-warning {
+                display: flex;
+            }
+        }
+        @media (max-height: 500px) {
+            .dg{
+                right: 0%;
+            }
+        }
+
 	</style>
 	
 	<canvas id="canvas"></canvas>
+    <canvas id="overlay"></canvas>
     <script type="importmap">
         {
           "imports": {
@@ -49,4 +95,7 @@
         <b>Image Characteristics:</b> <br><br>
         <b>Location</b>: di, <b>Orientation</b>: M, <b>Size</b>: hi, <b>Type</b>: Virtual
     </p>
+    <div class="orientation-warning">
+        <p>For the best experience, please rotate your device to landscape mode.</p>
+    </div>
 </body>

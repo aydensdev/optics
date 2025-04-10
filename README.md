@@ -5,3 +5,4 @@ This project serves as a visual aid in understanding the logic behind thin lense
 Referenced:
 
 https://phys.libretexts.org/Bookshelves/University_Physics/Physics_(Boundless)/24%3A_Geometric_Optics/24.3%3A_Lenses
+https://discourse.threejs.org/t/refracting-glass-sphere-how-to-add-some-reflection/20326
