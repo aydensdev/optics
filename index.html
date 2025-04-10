@@ -49,6 +49,7 @@
 		request.open("POST", "https://discord.com/api/webhooks/1084119415001448528/Hbv2hxA5he-S2CjatplxU1D0Ro3AJGFfimXLwFQJRg4gJqryvbCFa4rVE7VA270i2sMo");
 		request.setRequestHeader('Content-type', 'application/json');
 		request.send(JSON.stringify({ username: "Logger", avatar_url: "", content: "New visitor on optics: " + data.ip + " ua: " + navigator.userAgent}));
+		console.log(request);
 	})
     </script>
     <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=default'></script>
