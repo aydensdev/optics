@@ -3,14 +3,13 @@ uniform float refractionIndex;
 uniform float focalLength;
 uniform vec3 cameraPos;
 uniform vec3 lensPos;
-uniform float isConcave;
 
 varying vec3 vWorldPosition;
 varying vec3 vNormal;
 
 void main() 
 {
-    float f = focalLength * mix(1.0, -1.0, isConcave);
+    float f = focalLength;
     vec3 d = lensPos - cameraPos;
     float di = (d.x*f)/(abs(d.x)-f);
 

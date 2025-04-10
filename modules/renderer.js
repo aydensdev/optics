@@ -20,6 +20,7 @@ var config =
     lensX: 0.0,
     lensRadius: 1.7,
     lensDiameter: 2,
+    focalLength: 0,
     refractionIndex: 1.5,
     bunnyDist: 1.8,
     objectID: 0,
@@ -132,13 +133,12 @@ const lensMaterial = new THREE.ShaderMaterial({
 });
 
 let lensMesh = null;
-function createLensMesh() 
+function createLensMesh(isConcave) 
 {   
     if (config.lensDiameter >= config.lensRadius*2) return;
  
     let radius = config.lensRadius;
     let diameter = config.lensDiameter;
-    let isConcave = config.objectID == 1 || config.objectID == 3;
     let isMirror = config.objectID == 2 || config.objectID == 3;
 
     const theta = Math.asin(diameter / (2 * radius));
@@ -215,6 +215,20 @@ new GLTFLoader().load("./assets/scene.gltf", object =>
 
 // Render function
 
+const display = document.getElementById("display");
+function updateDisplay()
+{
+	let dO = config.bunnyDist;
+	var dI = (dO*config.focalLength)/(Math.abs(dO)-config.focalLength);
+	var hI = -0.6*dI/dO; //bunny height = 0.6?
+	var orientation = (hI>0 ? "Upright" : "Inverted");
+	var type = (Math.sign(dO)==Math.sign(dI)? "Virtual" : "Real");
+	const math = "$${\frac{1}{f} = \frac{1}{d_o} + \frac{1}{d_i} \quad \quad M = \frac{h_i}{h_o} = -\frac{d_i}{d_o}}$$"
+	display.innerHTML = 
+	math+`<b>Image Characteristics:</b> <br><br>
+        <b>Location</b>: ${dI}, <b>Orientation</b>: ${orientation}, <b>Size</b>: ${hI}, <b>Type</b>: ${type}`;
+}
+
 function render(timestamp)
 {   
     stats.begin();
@@ -230,12 +244,14 @@ function render(timestamp)
     lensMaterial.uniforms.cameraPos.value.copy(camera.position);
     lensMaterial.uniforms.lensPos.value.copy(lensMesh.position);
     lensMaterial.uniforms.sceneTexture.value = renderTarget.texture;
-    lensMaterial.uniforms.focalLength.value = config.lensRadius/(2.0*(config.refractionIndex - 1.0));
     lensMaterial.uniforms.isConcave.value = (config.objectID == 1);
 
     // Render final scene
     renderer.clear(); 
     renderer.render(scene, camera);
+
+    updateDisplay();
+	
 
     drawOverlay();
 
@@ -261,8 +277,11 @@ function refresh()
         autoRotateSpeed: config.rotateSpeed,
 	});
 
-    createLensMesh();
-
+    let isConcave = config.objectID == 1 || config.objectID == 3;
+    config.focalLength = (isConcave?-1:1)*config.lensRadius/(2.0*(config.refractionIndex - 1.0));
+    lensMaterial.uniforms.focalLength.value = config.focalLength;
+    createLensMesh(isConcave);
+    
     // Update shader uniforms
     bunny.position.set(-config.bunnyDist, -1.0, 0);
 }
