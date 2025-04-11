@@ -226,7 +226,7 @@ function updateDisplay()
 	display.innerHTML = 
 	`<br>
         <b>Location</b>: ${Math.round(100*dI)/100} <b>Orientation</b>: ${orientation}
-	<br><b>Size</b>: ${Math.round(100*hI)/100} <b>Type</b>: ${type} <b>F</b>: ${config.focalLength}`;
+	<br><b>Size</b>: ${Math.round(100*hI)/100} <b>Type</b>: ${type} <b>F</b>: ${Math.round(100*config.focalLength)/100}`;
 }
 
 function render(timestamp)
@@ -277,7 +277,7 @@ function refresh()
     let isConcave = config.objectID == 1 || config.objectID == 3;
     config.focalLength = (isConcave?-1:1)*config.lensRadius/(2.0*(config.refractionIndex - 1.0));
     lensMaterial.uniforms.focalLength.value = config.focalLength;
-	lensMaterial.uniforms.isConcave.value = isConcave;
+    lensMaterial.uniforms.isConcave.value = isConcave;
     createLensMesh(isConcave);
     
     // Update shader uniforms
