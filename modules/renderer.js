@@ -224,9 +224,9 @@ function updateDisplay()
 	var orientation = (hI>0 ? "Upright" : "Inverted");
 	var type = (Math.sign(dO)==Math.sign(dI)? "Virtual" : "Real");
 	display.innerHTML = 
-	`<b>Image Characteristics:</b> <br><br>
-        <b>Location</b>: ${Math.round(100*dI)/100} <b>Orientation</b>: ${orientation} <b>Size</b>: ${Math.round(100*hI)/100} 
-		<br><b>Type</b>: ${type} <b>Focal Length</b>: ${config.focalLength}`;
+	`<br>
+        <b>Location</b>: ${Math.round(100*dI)/100} <b>Orientation</b>: ${orientation}
+	<br><b>Size</b>: ${Math.round(100*hI)/100} <b>Type</b>: ${type} <b>F</b>: ${config.focalLength}`;
 }
 
 function render(timestamp)
