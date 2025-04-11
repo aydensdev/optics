@@ -3,6 +3,7 @@ uniform float refractionIndex;
 uniform float focalLength;
 uniform vec3 cameraPos;
 uniform vec3 lensPos;
+uniform float isConcave;
 
 varying vec3 vWorldPosition;
 varying vec3 vNormal;
