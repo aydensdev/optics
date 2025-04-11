@@ -215,18 +215,18 @@ new GLTFLoader().load("./assets/scene.gltf", object =>
 
 // Render function
 
-const display = document.getElementById("display");
+const display = document.getElementById("LOST");
 function updateDisplay()
 {
 	let dO = config.bunnyDist;
 	var dI = (dO*config.focalLength)/(Math.abs(dO)-config.focalLength);
-	var hI = -0.6*dI/dO; //bunny height = 0.6?
+	var hI = -0.6*dI/dO; //bunny height approx 0.6?
 	var orientation = (hI>0 ? "Upright" : "Inverted");
 	var type = (Math.sign(dO)==Math.sign(dI)? "Virtual" : "Real");
-	const math = "$${\frac{1}{f} = \frac{1}{d_o} + \frac{1}{d_i} \quad \quad M = \frac{h_i}{h_o} = -\frac{d_i}{d_o}}$$"
 	display.innerHTML = 
-	math+`<b>Image Characteristics:</b> <br><br>
-        <b>Location</b>: ${dI}, <b>Orientation</b>: ${orientation}, <b>Size</b>: ${hI}, <b>Type</b>: ${type}`;
+	`<b>Image Characteristics:</b> <br><br>
+        <b>Location</b>: ${Math.round(100*dI)/100} <b>Orientation</b>: ${orientation} <b>Size</b>: ${Math.round(100*hI)/100} 
+		<br><b>Type</b>: ${type} <b>Focal Length</b>: ${config.focalLength}`;
 }
 
 function render(timestamp)
@@ -244,16 +244,13 @@ function render(timestamp)
     lensMaterial.uniforms.cameraPos.value.copy(camera.position);
     lensMaterial.uniforms.lensPos.value.copy(lensMesh.position);
     lensMaterial.uniforms.sceneTexture.value = renderTarget.texture;
-    lensMaterial.uniforms.isConcave.value = (config.objectID == 1);
-
+	
     // Render final scene
     renderer.clear(); 
     renderer.render(scene, camera);
 
     updateDisplay();
-	
-
-    drawOverlay();
+    //drawOverlay();
 
     stats.end();
     requestAnimationFrame(render);
@@ -280,6 +277,7 @@ function refresh()
     let isConcave = config.objectID == 1 || config.objectID == 3;
     config.focalLength = (isConcave?-1:1)*config.lensRadius/(2.0*(config.refractionIndex - 1.0));
     lensMaterial.uniforms.focalLength.value = config.focalLength;
+	lensMaterial.uniforms.isConcave.value = isConcave;
     createLensMesh(isConcave);
     
     // Update shader uniforms
