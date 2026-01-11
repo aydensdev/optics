@@ -28,12 +28,17 @@
         }
 		#canvas
         {
-			position:absolute;
+            cursor: move;
+			position: absolute;
 			top:50%; left:50%;
 			transform: translate(-50%, -50%);
 			width: 70%; height:100%;
 			background-color: #2b2b2b;
 			outline: none;
+		}
+        #canvas:active
+        {
+            cursor: grabbing;
 		}
         .dg
         {
@@ -45,7 +50,7 @@
 			color:white;
 			font-family: monospace;
 			position: absolute;
-            bottom:1%; left:50%;
+            bottom:1vw; left:50%;
 			transform: translate(-50%, 0%);
 			padding: 2vh;
 			border-radius: 0.7em;
@@ -88,23 +93,14 @@
           }
         }
     </script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-    <script>         
-	$.getJSON("https://api.ipify.org?format=json", function(data) {
-		const request = new XMLHttpRequest();
-		request.open("POST", "https://discord.com/api/webhooks/1084119415001448528/Hbv2hxA5he-S2CjatplxU1D0Ro3AJGFfimXLwFQJRg4gJqryvbCFa4rVE7VA270i2sMo");
-		request.setRequestHeader('Content-type', 'application/json');
-		request.send(JSON.stringify({ username: "Logger", avatar_url: "", content: "New visitor on optics: " + data.ip + " ua: " + navigator.userAgent}));
-		console.log(request);
-	})
-    </script>
     <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=default'></script>
     <script src="./modules/renderer.js" type="module"></script>
     <div id="display">
 		<p>
             $${\frac{1}{f} = \frac{1}{d_o} + \frac{1}{d_i} \quad \quad M = \frac{h_i}{h_o} = -\frac{d_i}{d_o}}$$
         </p>
-		<p id="LOST"></p>
+        <b>🎥 Click and drag to look around</b>
+		<p id="LOST">LOADING...</p>
     </div>
     <div class="orientation-warning">
         <p>For the best experience, please rotate your device to landscape mode.</p>

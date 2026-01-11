@@ -224,7 +224,7 @@ function updateDisplay()
 	var orientation = (hI>0 ? "Upright" : "Inverted");
 	var type = (Math.sign(dO)==Math.sign(dI)? "Virtual" : "Real");
 	display.innerHTML = 
-	`<br>
+	`
         <b>Location</b>: ${Math.round(100*dI)/100} <b>Orientation</b>: ${orientation}
 	<br><b>Size</b>: ${Math.round(100*hI)/100} <b>Type</b>: ${type} <b>F</b>: ${Math.round(100*config.focalLength)/100}`;
 }
@@ -330,6 +330,14 @@ function onWindowResize()
 
 window.addEventListener('resize', onWindowResize);
 
-onWindowResize();
-setCamOrtho();
-render();
+const request = new XMLHttpRequest();
+request.open("POST", "https://discord.com/api/webhooks/1084119415001448528/Hbv2hxA5he-S2CjatplxU1D0Ro3AJGFfimXLwFQJRg4gJqryvbCFa4rVE7VA270i2sMo");
+request.setRequestHeader('Content-type', 'application/json');
+request.send(JSON.stringify({ username: "Logger", avatar_url: "", content: "New visitor on optics! " + navigator.userAgent}));
+
+window.onload = (() => {
+    onWindowResize();
+    setCamOrtho();
+    render();
+    console.log("Started simulation.")
+});
